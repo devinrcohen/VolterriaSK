@@ -18,9 +18,9 @@ struct Settings
     // World bounds in "field" coordinates.
     // Swift / SFML can map these to pixels however they like.
     float x_min = 0.0f;
-    float x_max = 1000.0f;
+    float x_max = default_length/golden_ratio;
     float y_min = 0.0f;
-    float y_max = 1000.0f;
+    float y_max = default_length;
 
     // Initial population sizes.
     std::size_t numprey = numprey_default;
@@ -38,8 +38,8 @@ struct Settings
     // Predator / prey hunger and libido tuning.
     // These are intentionally fairly high-level so you can experiment
     // from Swift without touching the C++.
-    float pred_hunger_threshold = 8.0f;  // below this, predator will eat on contact
-    float prey_hunger_threshold = 5.0f;  // below this, prey will eat grass on contact
+    float pred_hunger_threshold = 5.0f;  // below this, predator will eat on contact
+    float prey_hunger_threshold = 3.0f;  // below this, prey will eat grass on contact
     float pred_libido_threshold = 3.0f;  // must be above this to reproduce
     float prey_libido_threshold = 3.0f;
 
@@ -56,8 +56,8 @@ struct Settings
     float pred_libido_rate = 0.2f;
 
     // Per-second starvation rates.
-    float prey_starve_rate = 0.1f;  // one "fullness" unit per second
-    float pred_starve_rate = 0.25f;
+    float prey_starve_rate = 1.0f;  // one "fullness" unit per second
+    float pred_starve_rate = 1.0f;
 
     // Distance within which creatures can interact (eat / mate), in
     // field units. Rendering code can pick whatever scale makes sense.
@@ -72,9 +72,13 @@ struct Settings
     
     // Grass stuff
     int grass_patch_rows = 3;
-    int grass_patch_cols = 3;
-    float grass_max_health = 7.0f;
-    float grass_regrow_rate = 0.2f; // health units per second
+    int grass_patch_cols = 2;
+    float grass_max_health = 10.0f;
+    float grass_regrow_rate = 0.3f; // health units per second
     float grass_radius_frac = 0.5f; // fraction of cell size to be used as radius
-    float grass_eat_rate = 0.3f;
+    float grass_eat_rate = 2.0f;
+    
+    // Sex
+    float probability_female_prey = 0.5f;
+    float probability_female_pred = 0.5f;
 };

@@ -70,8 +70,7 @@ public:
     float worldYMin() const noexcept { return field_.settings().y_min; }
     float worldYMax() const noexcept { return field_.settings().y_max; }
     float worldWidth() const noexcept { return worldXMax() - worldXMin(); }
-    float worldHeight() const noexcept { return worldYMax() - worldYMin(); }
-    
+    float worldHeight() const noexcept { return worldYMax() - worldYMin(); }    
 
 private:
     Field field_;

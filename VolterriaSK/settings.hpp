@@ -18,9 +18,9 @@ struct Settings
     // World bounds in "field" coordinates.
     // Swift / SFML can map these to pixels however they like.
     float x_min = 0.0f;
-    float x_max = default_length/golden_ratio;
+    float x_max = x_min + default_length/golden_ratio;
     float y_min = 0.0f;
-    float y_max = default_length;
+    float y_max = y_min + default_length;
 
     // Initial population sizes.
     std::size_t numprey = numprey_default;
@@ -57,7 +57,7 @@ struct Settings
 
     // Per-second starvation rates.
     float prey_starve_rate = 1.0f;  // one "fullness" unit per second
-    float pred_starve_rate = 1.0f;
+    float pred_starve_rate = 0.25f;
 
     // Distance within which creatures can interact (eat / mate), in
     // field units. Rendering code can pick whatever scale makes sense.
@@ -65,7 +65,7 @@ struct Settings
     
     // Aging parameters
     float prey_max_age = 22.f; // seconds in-game time
-    float pred_max_age = 66.f; // seconds in-game time
+    float pred_max_age = 11.f; // seconds in-game time
     
     // max age randomness, +/-25% by default
     float age_variation_fraction = 0.25f;
@@ -81,4 +81,7 @@ struct Settings
     // Sex
     float probability_female_prey = 0.5f;
     float probability_female_pred = 0.5f;
+    
+    std::size_t num_cells_x = std::ceil((x_max - x_min) / interaction_radius);
+    std::size_t num_cells_y = std::ceil((y_max - y_min) / interaction_radius);
 };

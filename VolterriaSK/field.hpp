@@ -19,6 +19,7 @@
 #include "settings.hpp"
 #include "creature.hpp"
 
+
 // POD snapshot used for bridging out to Swift / C++.
 struct GrassPatch
 {
@@ -52,6 +53,27 @@ struct GrassPatch
     }
 };
 
+struct FieldCell
+{
+    Vec2 center = {0.0f, 0.0f};
+    std::vector<std::size_t> cell_creatures_indices;
+    std::vector<std::size_t> cell_grassPatches_indices;
+    float radius;
+    
+    FieldCell();
+    FieldCell(float cx, float cy, Settings& settings)
+    {
+        center = {cx, cy};
+        radius = settings.interaction_radius;
+    }
+    void Clear()
+    {
+        cell_creatures_indices.clear();
+        cell_grassPatches_indices.clear();
+    }
+
+};
+
 struct CreatureState
 {
     float        x;
@@ -73,9 +95,10 @@ public:
     // returns a POD-only copy so it is easy to bridge into Swift.
     std::vector<CreatureState> snapshot() const;
 
-    const Settings&                settings()  const noexcept { return settings_;  }
-    const std::vector<Creature>&   creatures() const noexcept { return creatures_; }
-    const std::vector<GrassPatch>& grassPatches() const noexcept { return grassPatches_; }
+    const Settings&                            settings()  const noexcept { return settings_;  }
+    const std::vector<Creature>&               creatures() const noexcept { return creatures_; }
+    const std::vector<GrassPatch>&             grassPatches() const noexcept { return grassPatches_; }
+    const std::vector<std::vector<FieldCell>>& field_cells() const noexcept { return field_cells_; }
     
     // Public settings-setters (lol that won't confuse anyone)
     void SetNumPrey(int);
@@ -91,6 +114,7 @@ private:
     Settings settings_;
     std::vector<Creature> creatures_;
     std::vector<GrassPatch> grassPatches_;
+    std::vector<std::vector<FieldCell>> field_cells_;
     std::mt19937 rng_;
     std::uniform_real_distribution<float> x_dist_;
     std::uniform_real_distribution<float> y_dist_;
@@ -98,6 +122,7 @@ private:
     std::bernoulli_distribution prey_female_dist_;
     std::bernoulli_distribution pred_female_dist_;
 
+    void initializeFieldCells();
     void initializeCreatures();
     void handleGrass(float dt);
     void handleInteractions();

@@ -31,6 +31,7 @@ Field::Field(const Settings& settings)
       prey_female_dist_(settings_.probability_female_prey),
       pred_female_dist_(settings_.probability_female_pred)
 {
+    initializeFieldCells();
     initializeCreatures();
     initializeGrass();
 }
@@ -44,6 +45,39 @@ void Field::ResetFromSettings()
     v_dist_ = std::uniform_real_distribution<float>(-settings_.vmax, settings_.vmax);
     initializeCreatures();
     initializeGrass();
+}
+
+void Field::initializeFieldCells()
+{
+    const std::size_t nx = settings_.num_cells_x;
+    const std::size_t ny = settings_.num_cells_y;
+    field_cells_.resize(nx);
+    for (std::vector<FieldCell> fcvec : field_cells_)
+    {
+        fcvec.resize(ny);
+    }
+    
+    const float x_min = settings_.x_min;
+    const float y_min = settings_.y_min;
+    const float radius = settings_.interaction_radius;
+    
+    for (int ix = 0; ix < nx; ++ix)
+    {
+        for (int iy = 0; iy < ny; ++iy)
+        {
+            FieldCell& cell = field_cells_[ix][iy];
+            
+//            float cx = x_min + (ix + 0.5f) * cell_size;
+//            float cy = y_min + (iy + 0.5f) * cell_size;
+//            cell.radius = settings_.interaction_radius;
+            
+            float cx = x_min + (ix + 1.0f) * radius;
+            float cy = y_min + (iy + 1.0f) * radius;
+            cell.radius = radius;
+            
+            cell.center = {cx, cy};
+        }
+    }
 }
 
 void Field::initializeCreatures()
@@ -70,9 +104,7 @@ void Field::initializeCreatures()
         std::bernoulli_distribution is_female(pred_female_dist_);
         Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
         creatures_.emplace_back(settings_, SpeciesRole::Predator, sex, pos, vel);
-        std::cout << (creatures_.at(i).sex() == Sex::Female ? "Female" : "Male") << " "
-            << (creatures_.at(i).species() == SpeciesRole::Prey ? "Prey" : "Predator" ) << " was created."
-            << std::endl;
+        announceCreature(&creatures_.at(i));
     }
 }
 
@@ -191,7 +223,7 @@ void Field::handleInteractions()
 //                        child_pos,
 //                        child_vel
 //                    );
-                    newborns.emplace_back(c1);
+                    newborns.emplace_back(newborn);
                     announceCreature(&newborns.front());
                     c1.onMate(settings_);
                     c2.onMate(settings_);

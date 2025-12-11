@@ -50,6 +50,7 @@ final class GameScene: SKScene {
         // compute dt
         if lastUpdateTime == 0 {
             lastUpdateTime = currentTime
+            return // this is new as of grid implementation
         }
         let dt_raw = currentTime - lastUpdateTime
         let dt = min(dt_raw, 1.0/60.0) // clamps spikes

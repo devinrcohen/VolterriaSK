@@ -98,9 +98,9 @@ void Creature::update(float dt, const Settings& settings)
             libido_ = max_libido_;
     }
 
-    maybeRecomputeAcceleration(dt, settings);
+    wander(dt, settings); // this is where the wandering happens
     integrate(dt); // integrates velocity with dv (dv/dt)*dt, and position with dx (dx/dt)*dt
-    applyWorldBounds(settings);
+    applyWorldBounds(settings); // fix OOB objects AFTER repositioning to prevent clipping
 }
 
 void Creature::integrate(float dt)
@@ -111,7 +111,7 @@ void Creature::integrate(float dt)
     position_.y += velocity_.y * dt;
 }
 
-void Creature::maybeRecomputeAcceleration(float /*dt*/, const Settings& settings)
+void Creature::wander(float /*dt*/, const Settings& settings)
 {
     if (accel_time_accumulator_ < settings.accel_tick)
         return;
@@ -195,6 +195,12 @@ void Creature::add_hunger(float amount, float max_hunger)
     hunger_ += amount;
     if (hunger_ > max_hunger) hunger_ = max_hunger;
 }
+
+//void Creature::setCellLocation(float cx, float cy)
+//{
+//    cell_x_ = cx;
+//    cell_y_ = cy;
+//}
 
 void Creature::setHunger(float h)
 {

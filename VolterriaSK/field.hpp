@@ -28,6 +28,11 @@ struct GrassPatch
     float health = 0.0f;
     float max_health = 10.0f;
     
+    void setCellLocation(float, float);
+    
+    int cx() const noexcept { return cell_x_; } // may not use
+    int cy() const noexcept { return cell_y_; } // may not use
+    
     void update(float dt, float regrow_rate)
     {
         health += regrow_rate * dt;
@@ -51,26 +56,30 @@ struct GrassPatch
         Vec2 d = p - center;
         return (d.x*d.x + d.y*d.y) <= radius * radius; // distance-from-center^2 <= grass radius^2
     }
+    // what cell is it in?
+    int cell_x_, cell_y_;  // may not use
 };
 
 struct FieldCell
 {
-    Vec2 center = {0.0f, 0.0f};
-    std::vector<std::size_t> cell_creatures_indices;
-    std::vector<std::size_t> cell_grassPatches_indices;
-    float radius;
+    //Vec2 center = {0.0f, 0.0f};
+    // only store the indices to each object, since Field already contains
+    // the master vectors for all creatures and patches
+    std::vector<int> cell_creatures_indices;
+    std::vector<int> cell_grassPatches_indices;
+    //float radius;
     
-    FieldCell();
-    FieldCell(float cx, float cy, Settings& settings)
-    {
-        center = {cx, cy};
-        radius = settings.interaction_radius;
-    }
-    void Clear()
-    {
-        cell_creatures_indices.clear();
-        cell_grassPatches_indices.clear();
-    }
+//    FieldCell();
+//    FieldCell(float cx, float cy, Settings& settings)
+//    {
+//        center = {cx, cy};
+//        radius = settings.interaction_radius;
+//    }
+//    void Clear()
+//    {
+//        cell_creatures_indices.clear();
+//        cell_grassPatches_indices.clear();
+//    }
 
 };
 
@@ -127,6 +136,12 @@ private:
     void handleGrass(float dt);
     void handleInteractions();
     void initializeGrass();
+    void pairCheck();
+    template <typename T> void ComputeCellLocation(const T&, int*, int*);
+    
+    // recalculated after determining # of cells
+    int actual_cell_width_;
+    int actual_cell_height_;
 };
 
 

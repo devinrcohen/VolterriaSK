@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <cstdint>
+
 #include "field.hpp"
 #include "creature.hpp"
 

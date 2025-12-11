@@ -43,41 +43,19 @@ void Field::ResetFromSettings()
     x_dist_ = std::uniform_real_distribution<float>(settings_.x_min, settings_.x_max);
     y_dist_ = std::uniform_real_distribution<float>(settings_.y_min, settings_.y_max);
     v_dist_ = std::uniform_real_distribution<float>(-settings_.vmax, settings_.vmax);
+    initializeFieldCells();
     initializeCreatures();
     initializeGrass();
 }
 
 void Field::initializeFieldCells()
 {
-    const std::size_t nx = settings_.num_cells_x;
-    const std::size_t ny = settings_.num_cells_y;
+    const int nx = settings_.num_cells_x;
+    const int ny = settings_.num_cells_y;
+    actual_cell_width_ = (settings_.x_max - settings_.x_min) / nx;
+    actual_cell_height_ = (settings_.y_max - settings_.y_min) / ny;
     field_cells_.resize(nx);
-    for (std::vector<FieldCell> fcvec : field_cells_)
-    {
-        fcvec.resize(ny);
-    }
-    
-    const float x_min = settings_.x_min;
-    const float y_min = settings_.y_min;
-    const float radius = settings_.interaction_radius;
-    
-    for (int ix = 0; ix < nx; ++ix)
-    {
-        for (int iy = 0; iy < ny; ++iy)
-        {
-            FieldCell& cell = field_cells_[ix][iy];
-            
-//            float cx = x_min + (ix + 0.5f) * cell_size;
-//            float cy = y_min + (iy + 0.5f) * cell_size;
-//            cell.radius = settings_.interaction_radius;
-            
-            float cx = x_min + (ix + 1.0f) * radius;
-            float cy = y_min + (iy + 1.0f) * radius;
-            cell.radius = radius;
-            
-            cell.center = {cx, cy};
-        }
-    }
+    field_cells_.assign(nx, std::vector<FieldCell>(ny));
 }
 
 void Field::initializeCreatures()
@@ -93,7 +71,7 @@ void Field::initializeCreatures()
         std::bernoulli_distribution is_female(prey_female_dist_);
         Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
         creatures_.emplace_back(settings_, SpeciesRole::Prey, sex, pos, vel);
-        announceCreature(&creatures_.at(i));
+        //announceCreature(&creatures_.at(i));
     }
 
     // Spawn predators.
@@ -104,7 +82,7 @@ void Field::initializeCreatures()
         std::bernoulli_distribution is_female(pred_female_dist_);
         Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
         creatures_.emplace_back(settings_, SpeciesRole::Predator, sex, pos, vel);
-        announceCreature(&creatures_.at(i));
+        //announceCreature(&creatures_.at(i));
     }
 }
 
@@ -113,9 +91,39 @@ void Field::step(float dt)
     // Update all existing creatures.
     for (Creature& c : creatures_)
     {
-        c.update(dt, settings_);
+        if(c.isAlive())
+            c.update(dt, settings_);
     }
+    //int originalCount = static_cast<int>(creatures_.size());
+    for (auto& col : field_cells_)
+    {
+        for (auto& cell : col)
+        {
+            cell.cell_creatures_indices.clear();
+            // might need to clear grass too? those interactions are separate right now
+        }
+    }
+    // Assign each creature to a cell (new)
+    const int nx = settings_.num_cells_x;
+    const int ny = settings_.num_cells_y;
     
+    // Assign each grass patch to a cell
+    for (int i = 0; i < grassPatches_.size(); ++i)
+    {
+        GrassPatch& g = grassPatches_[i];
+        if (g.health <= 0.0f) continue;
+        
+        const float x = g.center.x;
+        const float y = g.center.y;
+        
+        int cx = (x - settings_.x_min) / settings_.interaction_radius;
+        int cy = (y - settings_.y_min) / settings_.interaction_radius;
+        
+        cx = std::clamp(cx, 0, nx-1);
+        cy = std::clamp(cy, 0, ny-1);
+        
+        field_cells_[cx][cy].cell_grassPatches_indices.push_back(i);
+    }
     handleGrass(dt);
     // Apply interactions: eating, mating, and pruning of dead creatures.
     handleInteractions();
@@ -125,118 +133,165 @@ void Field::step(float dt)
         std::remove_if(creatures_.begin(), creatures_.end(),
                        [](const Creature& c) { return !c.isAlive(); }),
         creatures_.end());
+    
 }
+
+static int pairChecks = 0;
+static int pairChecks_previous = 0;
+static int ticks = 0;
 
 void Field::handleInteractions()
 {
     const float interaction_radius2 = settings_.interaction_radius * settings_.interaction_radius;
-
     std::vector<Creature> newborns;
-    newborns.reserve(creatures_.size() / 4); // rough guess
-
-    const std::size_t n = creatures_.size();
-    for (std::size_t i = 0; i < n; ++i)
+    newborns.reserve(creatures_.size() / 4); // approximation
+    
+    const int originalCount = static_cast<int>(creatures_.size()); // compare vs settings_.creature_threshold
+    
+    // Grid start if originalCount > settings_.creature_threshold
+    for (auto& col : field_cells_)
     {
-        Creature& a = creatures_[i];
-        if (!a.isAlive()) continue;
-
-        for (std::size_t j = i + 1; j < n; ++j)
+        for (auto& cell : col)
         {
-            Creature& b = creatures_[j];
-            if (!b.isAlive()) continue;
+            cell.cell_creatures_indices.clear();
+            // might need to clear grass too? those interactions are separate right now
+        }
+    }
+    // Assign each creature to a cell (new)
+    for (int i = 0; i < originalCount; ++i)
+    {
+        Creature& c = creatures_[i];
+        if (!c.isAlive()) continue;
+        
+        int cx, cy;
 
-            const float dist2 = distanceSquared(a.position(), b.position());
-            if (dist2 > interaction_radius2)
-                continue;
-
-            // Predator / prey interaction.
-            if (a.species() != b.species())
+        ComputeCellLocation<Creature>(c, &cx, &cy);
+        
+        // copy the the index of the creature in the master vector into the cell's own vector
+        field_cells_[cx][cy].cell_creatures_indices.push_back(i);
+    }
+    // consider making this a function pairCheck() -- no args because everything is taken from settings or private properties
+    for (int i = 0; i < originalCount; ++i)
+    {
+        // loop over master vector
+        Creature& A = creatures_[i];
+        if(!A.isAlive()) continue;
+        int cx, cy;
+        ComputeCellLocation<Creature>(creatures_[i], &cx, &cy);
+        // for each adjacent/cattycorner cell
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            for (int dy = -1; dy <= 1; ++dy)
             {
-                Creature* predator = nullptr;
-                Creature* prey     = nullptr;
-
-                if (a.species() == SpeciesRole::Predator)
-                {
-                    predator = &a;
-                    prey     = &b;
-                }
-                else
-                {
-                    predator = &b;
-                    prey     = &a;
-                }
-
-                if (!predator || !prey || !prey->isAlive())
-                    continue;
-
-                // Simple rule: predator eats prey if its fullness is below the
-                // configured threshold.
-                if (predator->hunger() <= settings_.pred_hunger_threshold)
-                {
-                    predator->onEat(settings_);
-                    prey->kill();
-                }
-            }
-            else
-            {
-                // Same species: check for mating.
-                Creature& c1 = a;
-                Creature& c2 = b;
+                // coordinates of nearby cell
+                int nx = cx + dx;
+                int ny = cy + dy;
                 
-                // Are they even alive?
-                if (!c1.isAlive() || !c2.isAlive())
-                    continue;
+                if (nx < 0 || nx >= settings_.num_cells_x) continue; // horizontally OOB
+                if (ny < 0 || ny >= settings_.num_cells_y) continue; // vertically OOB
                 
-                // Are they even compatible?
-                if (c1.sex() == c2.sex())
-                    continue;
-
-                const bool is_prey = (c1.species() == SpeciesRole::Prey);
-
-                const float libido_threshold =
-                    is_prey ? settings_.prey_libido_threshold
-                            : settings_.pred_libido_threshold;
-
-                if (c1.libido() >= libido_threshold &&
-                    c2.libido() >= libido_threshold)
+                FieldCell& cell = field_cells_[nx][ny];
+                for (int idx : cell.cell_creatures_indices)
                 {
-                    // Spawn a child at the midpoint of the parents' positions.
-                    Vec2 child_pos{
-                        0.5f * (c1.position().x + c2.position().x),
-                        0.5f * (c1.position().y + c2.position().y)
-                    };
-                    Vec2 child_vel{
-                        v_dist_(rng_),
-                        v_dist_(rng_)
-                    };
+                    // no self or duplicate interaction
+                    if (idx <= i) continue;
+                    Creature& B = creatures_[idx];
                     
-                    std::bernoulli_distribution is_female(prey_female_dist_);
-                    Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
-                    Creature newborn(settings_, c1.species(), sex, child_pos, child_vel);
-                    // average the hunger of the parents so baby isn't magically full;
-                    // prevents perpetual species growth if reproduction rate outpaces prey population decline
-                    newborn.setHunger((c1.hunger() + c2.hunger())/2); // average the hunger of the parents so baby isn't magically full,
-//                    newborns.emplace_back(
-//                        settings_,
-//                        c1.species(),
-//                        sex,
-//                        child_pos,
-//                        child_vel
-//                    );
-                    newborns.emplace_back(newborn);
-                    announceCreature(&newborns.front());
-                    c1.onMate(settings_);
-                    c2.onMate(settings_);
+                    // no dead interactions
+                    if (!B.isAlive()) continue;
+      
+                    /* common: this is where the creatures are compared - something like Field::checkN2(Creature& A, Creature& B) */
+                    // consider putting into a function like pairCheck(Creature&, Creature&, std::vector<Creature>& newborns)
+                    // pairCheck(A, B, newborns);
+                    float dist2 = distanceSquared(A.position(), B.position());
+                    pairChecks++;
+                    if (dist2 > interaction_radius2) continue;
+                    if (dist2 <= interaction_radius2)
+                    {
+                        if (!A.isAlive() || !B.isAlive()) continue;
+                        
+                        // predator/prey interaction
+                        if (A.species() != B.species()) // one of these is the hunter
+                        {
+                            Creature* predator = nullptr;
+                            Creature* prey     = nullptr;
+                            
+                            if (A.species() == SpeciesRole::Predator)
+                            {
+                                predator = &A;
+                                prey     = &B;
+                            }
+                            else
+                            {
+                                predator = &B;
+                                prey     = &A;
+                            }
+                            if (!predator || !prey || !prey->isAlive())
+                                continue;
+                            
+                            // Simple rule: predator eats prey if its fullness is below the
+                            // configured threshold.
+                            if (predator->hunger() <= settings_.pred_hunger_threshold)
+                            {
+                                predator->onEat(settings_);
+                                prey->kill();
+                            }
+                        } else { // both are the same species, mate logic
+                            // Are they even alive?
+                            if (!A.isAlive() || !B.isAlive())
+                                continue;
+                            
+                            // Are they even compatible?
+                            if (A.sex() == B.sex())
+                                continue;
+                            
+                            const bool is_prey = (B.species() == SpeciesRole::Prey);
+                            
+                            const float libido_threshold =
+                            is_prey ? settings_.prey_libido_threshold
+                            : settings_.pred_libido_threshold;
+                            if (A.libido() >= libido_threshold &&
+                                B.libido() >= libido_threshold)
+                            {
+                                // Spawn a child at the midpoint of the parents' positions.
+                                Vec2 child_pos{
+                                    0.5f * (A.position().x + B.position().x),
+                                    0.5f * (A.position().y + B.position().y)
+                                };
+                                Vec2 child_vel{
+                                    v_dist_(rng_),
+                                    v_dist_(rng_)
+                                };
+                                
+                                std::bernoulli_distribution is_female(prey_female_dist_);
+                                Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
+                                Creature newborn(settings_, A.species(), sex, child_pos, child_vel);
+                                // average the hunger of the parents so baby isn't magically full;
+                                // prevents perpetual species growth if reproduction rate outpaces prey population decline
+                                newborn.setHunger((A.hunger() + B.hunger())/2); // average the hunger of the parents so baby isn't magically full,
+                                //creatures_.push_back(newborn);
+                                newborns.emplace_back(std::move(newborn));
+                                //announceCreature(&newborns.front());
+                                //announceCreature(&newborn);
+                                A.onMate(settings_);
+                                B.onMate(settings_);
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-
-    // Append any newborn creatures after all pairwise checks.
+    
     for (Creature& c : newborns)
-    {
         creatures_.push_back(std::move(c));
+    if (ticks > 60) {
+        ticks = 0;
+        size_t delta = pairChecks - pairChecks_previous;
+        std::cerr << "creatures=" << creatures_.size() << " pairchecks=" << pairChecks << " delta=" << delta << std::endl;
+        pairChecks_previous = pairChecks;
     }
+    ticks++;
 }
 
 std::vector<CreatureState> Field::snapshot() const
@@ -275,7 +330,7 @@ void Field::initializeGrass()
     
     for (int ry = 0; ry < rows; ++ry)
     {
-        for(int cx = 0; cx < cols; ++cx)
+        for (int cx = 0; cx < cols; ++cx)
         {
             GrassPatch g;
             g.center = Vec2{
@@ -372,4 +427,34 @@ void Field::announceCreature(Creature *c)
     else
         strcpy(role, "predator");
     std::cout << "A " << sex << " " << role << " was created." << std::endl;
+}
+
+template <typename T> void Field::ComputeCellLocation(const T& obj, int *cx, int *cy)
+{
+    float world_x = obj.position().x;
+    float world_y = obj.position().y;
+    
+    float x_min = settings_.x_min;
+    float y_min = settings_.y_min;
+    float cell_size = settings_.cell_size;
+    int num_cells_x = settings_.num_cells_x;
+    int num_cells_y = settings_.num_cells_y;
+    
+    
+    int cx_unclamped = std::floor((world_x - x_min)/cell_size);
+    int cy_unclamped = std::floor((world_y - y_min)/cell_size);
+    
+    *cx = std::clamp(cx_unclamped, 0, num_cells_x - 1);
+    *cy = std::clamp(cy_unclamped, 0, num_cells_y - 1);
+}
+
+void GrassPatch::setCellLocation(float cx, float cy)
+{
+    cell_x_ = cx;
+    cell_y_ = cy;
+}
+
+void Field::pairCheck()
+{
+    
 }

@@ -89,6 +89,7 @@ public:
     // Per-frame update entry point used by Field.
     void update(float dt, const Settings& settings);
     void setHunger(float);
+    void setCellLocation(float, float);
 
     // Simple getters used by the Field / snapshot layer.
     SpeciesRole species()     const noexcept { return species_; }
@@ -99,6 +100,8 @@ public:
     float       hunger()      const noexcept { return hunger_;  }
     float       libido()      const noexcept { return libido_;  }
     float       libidoThreshold() const noexcept { return libido_threshold_; }
+//    int cx() const noexcept { return cell_x_; }
+//    int cy() const noexcept { return cell_y_; }
 
     void kill() noexcept { alive_ = false; }
 
@@ -109,7 +112,7 @@ public:
 
 private:
     void integrate(float dt);
-    void maybeRecomputeAcceleration(float dt, const Settings& settings);
+    void wander(float dt, const Settings& settings);
     void applyWorldBounds(const Settings& settings);
 
     SpeciesRole species_;
@@ -130,9 +133,12 @@ private:
     float accel_time_accumulator_  = 0.0f;
     float hunger_time_accumulator_ = 0.0f;
     
+    // what cell is it in?
+//    int cell_x_, cell_y_;
+    
     // Aging state
     float age_ = 0.0f; // current age in simulation seconds
-    float max_age_ = 60.f; // assigned in constructions from Settings
+    float max_age_ = 60.f; // assigned in constructorfrom Settings
 
     std::mt19937 rng_;
 };

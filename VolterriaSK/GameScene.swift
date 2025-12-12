@@ -20,6 +20,12 @@ final class GameScene: SKScene {
     private var grassLabelNodes: [Int32: SKLabelNode] = [:]
     
     private let populationLabel = SKLabelNode() // nil for system font
+    private let secondsLabel = SKLabelNode()
+    private let perFrameLabel = SKLabelNode()
+    private let fpsLabel = SKLabelNode()
+    private var fpsPrintCount = 0
+    private let fpsPrintWhen = 15 // 60ths of a second
+    private var framesPerSecond = 0.0
     //private var grassLabels: [Int32: SKLabelNode] = [:]
     // Init
     init(size: CGSize, engine: VolterriaEngine) {
@@ -38,28 +44,45 @@ final class GameScene: SKScene {
     override func didMove(to view: SKView) {
         self.backgroundColor = .black
         
+        // label updates
         populationLabel.fontSize = 24.0
         populationLabel.fontColor = .white
         populationLabel.horizontalAlignmentMode = .left
         populationLabel.verticalAlignmentMode = .top
         populationLabel.position = CGPoint(x: 8, y: size.height - 8)
+        
+        perFrameLabel.fontSize = 24.0
+        perFrameLabel.fontColor = .white
+        perFrameLabel.horizontalAlignmentMode = .left
+        perFrameLabel.verticalAlignmentMode = .top
+        perFrameLabel.position = CGPoint(x: 8, y: size.height - 28)
+        
+        fpsLabel.fontSize = 24.0
+        fpsLabel.fontColor = .white
+        fpsLabel.horizontalAlignmentMode = .right
+        fpsLabel.verticalAlignmentMode = .top
+        fpsLabel.position = CGPoint(x: size.width - 8 , y: size.height - 8)
+        
         addChild(populationLabel)
+        addChild(perFrameLabel)
+        addChild(secondsLabel)
+        addChild(fpsLabel)
     }
     
     override func update(_ currentTime: TimeInterval) {
         // compute dt
         if lastUpdateTime == 0 {
-            lastUpdateTime = currentTime
+            lastUpdateTime = currentTime // store the actual time
             return // this is new as of grid implementation
         }
         let dt_raw = currentTime - lastUpdateTime
         let dt = min(dt_raw, 1.0/60.0) // clamps spikes
-        lastUpdateTime = currentTime
+        lastUpdateTime = currentTime // update time for next iteration
         
         // 1.  Step C++ Engine
         engine.step(dt)
         
-        // 2.  Pull snapshots
+        // 2.  Pull snapshots from C++ Engine
         let creaturesVec = engine.creatureSnapshot()
         let creatures = Array(creaturesVec)
         let grassPatchesVec = engine.grassSnapshot()
@@ -69,10 +92,23 @@ final class GameScene: SKScene {
         syncGrassNodes(to: grassPatches)
         syncCreatureNodes(to: creatures)
         
-        // Update label
+        // Update labels
         let preyCount = creatures.filter{ $0.role == .Prey }.count
         let predatorCount = creatures.filter{ $0.role == .Predator }.count
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        let checksPerFrame = formatter.string(from: engine.pairChecksPerFrame() as NSNumber) ?? ""
+        
+        if fpsPrintCount == fpsPrintWhen {
+            fpsPrintCount = 0
+            let fpsString = String(format: "%.1f", engine.framesPerSecond())
+            fpsLabel.text = "\(fpsString) FPS"
+        } else {
+            fpsPrintCount += 1
+        }
+        
         populationLabel.text = "Prey: \(preyCount)\n Predators: \(predatorCount)"
+        perFrameLabel.text = "checks per frame: \(checksPerFrame)"
     }
     
     private var worldXMin: CGFloat { CGFloat(engine.worldXMin()) }
@@ -92,7 +128,8 @@ final class GameScene: SKScene {
         guard worldHeight > 0 else { return size.height / 2 }
         
         let t = (CGFloat(y) - worldYMin) / worldHeight
-        return (1.0 - t) * size.height // flip vertically
+        //return (1.0 - t) * size.height // flip vertically
+        return t * size.height
     }
     
     private var patchScale: CGFloat {
@@ -155,7 +192,7 @@ final class GameScene: SKScene {
     }
     
     private func makePredatorNode(id: Int32, sex: VSex) -> SKShapeNode {
-        let radius: CGFloat = 10
+        let radius: CGFloat = 4
         let node = SKShapeNode(circleOfRadius: radius)
         node.fillColor = .red
         switch sex {

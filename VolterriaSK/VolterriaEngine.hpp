@@ -71,8 +71,12 @@ public:
     float worldYMin() const noexcept { return field_.settings().y_min; }
     float worldYMax() const noexcept { return field_.settings().y_max; }
     float worldWidth() const noexcept { return worldXMax() - worldXMin(); }
-    float worldHeight() const noexcept { return worldYMax() - worldYMin(); }    
-
+    float worldHeight() const noexcept { return worldYMax() - worldYMin(); }
+    
+    // Miscellaneous
+    int elapsedSimSeconds() const noexcept { return field_.elapsedSimSeconds(); }
+    int pairChecksPerFrame() const noexcept { return field_.pairChecksPerFrame(); }
+    float framesPerSecond() const noexcept { return field_.framesPerSecond(); }
 private:
     Field field_;
 };

@@ -22,8 +22,8 @@ enum class SpeciesRole : int { Prey = 0, Predator = 1 };
 enum class Sex : int { Male = 0, Female = 1 };
 
 // Default creature counts for a fresh field.
-constexpr int numprey_default  = 150;
-constexpr int numpred_default  = 15;
+constexpr int numprey_default  = 100;
+constexpr int numpred_default  = 10;
 
 // Maximum recommended speed (units / second). This is used by the
 // acceleration logic to keep velocities from exploding.

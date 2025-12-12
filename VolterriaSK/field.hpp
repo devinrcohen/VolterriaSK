@@ -14,6 +14,8 @@
 
 #include <vector>
 #include <random>
+#include <chrono>
+#include <iostream>
 
 #include "constants.hpp"
 #include "settings.hpp"
@@ -42,12 +44,6 @@ struct GrassPatch
     
     float healthNormalized() const
     {
-        //return max_health > 0.0f ? (health / max_health) : 0.0f;
-        //if (max_health <= 0.0f) return 0.0f;
-        //float h = health/max_health;
-        //if (h < 0.0f) h = 0.0f;
-        //if (h > 1.0f) h = 1.0f;
-        //return h;
         return health/max_health;
     }
     
@@ -62,25 +58,8 @@ struct GrassPatch
 
 struct FieldCell
 {
-    //Vec2 center = {0.0f, 0.0f};
-    // only store the indices to each object, since Field already contains
-    // the master vectors for all creatures and patches
     std::vector<int> cell_creatures_indices;
     std::vector<int> cell_grassPatches_indices;
-    //float radius;
-    
-//    FieldCell();
-//    FieldCell(float cx, float cy, Settings& settings)
-//    {
-//        center = {cx, cy};
-//        radius = settings.interaction_radius;
-//    }
-//    void Clear()
-//    {
-//        cell_creatures_indices.clear();
-//        cell_grassPatches_indices.clear();
-//    }
-
 };
 
 struct CreatureState
@@ -92,6 +71,16 @@ struct CreatureState
     bool         alive;
 };
 
+enum class DistType { Uniform, Normal };
+
+struct Perception
+{
+    bool hasFoodTarget = false;
+    Vec2 foodDirection{};
+    bool hasMateTarget = false;
+    Vec2 mateDirection{};
+};
+
 class Field
 {
 public:
@@ -99,15 +88,18 @@ public:
     void ResetFromSettings();
     // Advance the simulation by dt seconds.
     void step(float dt);
-
+    
     // Lightweight snapshot used by the UI layer. This intentionally
     // returns a POD-only copy so it is easy to bridge into Swift.
     std::vector<CreatureState> snapshot() const;
-
+    
     const Settings&                            settings()  const noexcept { return settings_;  }
     const std::vector<Creature>&               creatures() const noexcept { return creatures_; }
     const std::vector<GrassPatch>&             grassPatches() const noexcept { return grassPatches_; }
     const std::vector<std::vector<FieldCell>>& field_cells() const noexcept { return field_cells_; }
+    const int elapsedSimSeconds() const noexcept { return elapsed_sim_seconds_; }
+    const int pairChecksPerFrame() const noexcept { return pair_checks_per_frame_; }
+    const float framesPerSecond() const noexcept { return 1.0f / elapsed_sec_; }
     
     // Public settings-setters (lol that won't confuse anyone)
     void SetNumPrey(int);
@@ -125,14 +117,19 @@ private:
     std::vector<GrassPatch> grassPatches_;
     std::vector<std::vector<FieldCell>> field_cells_;
     std::mt19937 rng_;
-    std::uniform_real_distribution<float> x_dist_;
-    std::uniform_real_distribution<float> y_dist_;
-    std::uniform_real_distribution<float> v_dist_;
+    
+    std::uniform_real_distribution<float> x_dist_uniform_;
+    std::uniform_real_distribution<float> y_dist_uniform_;
+    std::uniform_real_distribution<float> v_dist_uniform_;
+    std::normal_distribution<float> x_prey_spawn_normal_;
+    std::normal_distribution<float> y_prey_spawn_normal_;
+    std::normal_distribution<float> x_predator_spawn_normal_;
+    std::normal_distribution<float> y_predator_spawn_normal_;
     std::bernoulli_distribution prey_female_dist_;
     std::bernoulli_distribution pred_female_dist_;
 
     void initializeFieldCells();
-    void initializeCreatures();
+    void initializeCreatures(DistType);
     void handleGrass(float dt);
     void handleInteractions();
     void initializeGrass();
@@ -142,6 +139,12 @@ private:
     // recalculated after determining # of cells
     int actual_cell_width_;
     int actual_cell_height_;
+    
+    int elapsed_sim_seconds_ = 0;
+    int pair_checks_per_frame_ = 0;
+    
+    std::chrono::steady_clock::time_point start_time_;
+    float elapsed_sec_;
 };
 
 

@@ -21,6 +21,22 @@ struct Settings
     float x_max = x_min + default_length/golden_ratio;
     float y_min = 0.0f;
     float y_max = y_min + default_length;
+    float x_center = (x_min + x_max)/2.0;
+    float y_center = (y_min + y_max)/2.0;
+    
+    float field_width = x_max - x_min;
+    float field_height = y_max - y_min;
+    
+    // spawn locations
+    float prey_spawn_mean_x = x_center;
+    float prey_spawn_mean_y = (y_min + y_center) / 2.0; // half-way between bottom and center
+    float prey_spawn_stdev_n = 5.0; // number of std.dvs between center field and walls
+    float prey_spawn_stdev = std::min(field_height/2.0, field_height/2.0) / (2 * prey_spawn_stdev_n);
+    
+    float predator_spawn_mean_x = x_center;
+    float predator_spawn_mean_y = (y_center + y_max) / 2.0; // half-way between center and top
+    float predator_spawn_stdev_n = 5.0;
+    float predator_spawn_stdev = std::min(field_height/2.0, field_height/2.0) / (2 * predator_spawn_stdev_n);
     
     // Initial population sizes.
     int numprey = numprey_default;
@@ -62,12 +78,16 @@ struct Settings
     // Distance within which creatures can interact (eat / mate), in
     // field units. Rendering code can pick whatever scale makes sense.
     float interaction_radius = 10.0f;
-    const float interaction_multiplier = 100.0f;
-    float cell_size = interaction_multiplier * interaction_radius;
+    float prey_vision_radius = 40.0f;
+    float predator_vision_radius = 60.0f;
+    const float interaction_multiplier = 2.0f;
+    float cell_size = interaction_multiplier * predator_vision_radius;
     
     // Aging parameters
     float prey_max_age = 22.f; // seconds in-game time
+    float prey_age_tolerance = 2.f; // +/- seconds
     float pred_max_age = 11.f; // seconds in-game time
+    float predator_age_tolerance = 2.f; // +/- seconds
     
     // max age randomness, +/-25% by default
     float age_variation_fraction = 0.25f;

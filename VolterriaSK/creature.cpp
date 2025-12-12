@@ -111,7 +111,7 @@ void Creature::integrate(float dt)
     position_.y += velocity_.y * dt;
 }
 
-void Creature::wander(float /*dt*/, const Settings& settings)
+void Creature::wander(float dt, const Settings& settings)
 {
     if (accel_time_accumulator_ < settings.accel_tick)
         return;

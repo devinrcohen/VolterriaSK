@@ -25,14 +25,19 @@ namespace
 Field::Field(const Settings& settings)
     : settings_(settings),
       rng_(std::random_device{}()),
-      x_dist_(settings_.x_min, settings_.x_max),
-      y_dist_(settings_.y_min, settings_.y_max),
-      v_dist_(-settings_.vmax, settings_.vmax),
+      x_dist_uniform_(settings_.x_min, settings_.x_max),
+      y_dist_uniform_(settings_.y_min, settings_.y_max),
+      v_dist_uniform_(-settings_.vmax, settings_.vmax),
+      x_prey_spawn_normal_(settings_.prey_spawn_mean_x, settings_.prey_spawn_stdev),
+      y_prey_spawn_normal_(settings_.prey_spawn_mean_y, settings_.prey_spawn_stdev),
+      x_predator_spawn_normal_(settings_.predator_spawn_mean_x, settings_.predator_spawn_stdev),
+      y_predator_spawn_normal_(settings_.predator_spawn_mean_y, settings_.predator_spawn_stdev),
       prey_female_dist_(settings_.probability_female_prey),
       pred_female_dist_(settings_.probability_female_pred)
 {
     initializeFieldCells();
-    initializeCreatures();
+    //initializeCreatures(DistType::Uniform);
+    initializeCreatures(DistType::Normal);
     initializeGrass();
 }
 
@@ -40,11 +45,15 @@ void Field::ResetFromSettings()
 {
     creatures_.clear();
     grassPatches_.clear();
-    x_dist_ = std::uniform_real_distribution<float>(settings_.x_min, settings_.x_max);
-    y_dist_ = std::uniform_real_distribution<float>(settings_.y_min, settings_.y_max);
-    v_dist_ = std::uniform_real_distribution<float>(-settings_.vmax, settings_.vmax);
+    x_dist_uniform_ = std::uniform_real_distribution<float>(settings_.x_min, settings_.x_max);
+    y_dist_uniform_ = std::uniform_real_distribution<float>(settings_.y_min, settings_.y_max);
+    v_dist_uniform_ = std::uniform_real_distribution<float>(-settings_.vmax, settings_.vmax);
+    x_prey_spawn_normal_ = std::normal_distribution<float>(settings_.prey_spawn_mean_x, settings_.prey_spawn_stdev);
+    y_prey_spawn_normal_ = std::normal_distribution<float>(settings_.prey_spawn_mean_y, settings_.prey_spawn_stdev);
+    x_predator_spawn_normal_ = std::normal_distribution<float>(settings_.predator_spawn_mean_x, settings_.predator_spawn_stdev);
+    y_predator_spawn_normal_ = std::normal_distribution<float>(settings_.predator_spawn_mean_y, settings_.predator_spawn_stdev);
     initializeFieldCells();
-    initializeCreatures();
+    initializeCreatures(DistType::Normal);
     initializeGrass();
 }
 
@@ -58,16 +67,19 @@ void Field::initializeFieldCells()
     field_cells_.assign(nx, std::vector<FieldCell>(ny));
 }
 
-void Field::initializeCreatures()
+void Field::initializeCreatures(DistType spawnDistType)
 {
     creatures_.clear();
     creatures_.reserve((settings_.numprey + settings_.numpred) * 4.0); // preallocate for higher population
-
+    Vec2 pos, vel;
+    
     // Spawn prey.
     for (std::size_t i = 0; i < settings_.numprey; ++i)
     {
-        Vec2 pos{x_dist_(rng_), y_dist_(rng_)};
-        Vec2 vel{v_dist_(rng_), v_dist_(rng_)};
+        pos.x = (spawnDistType == DistType::Normal) ? x_prey_spawn_normal_(rng_) : x_dist_uniform_(rng_);
+        pos.y = (spawnDistType == DistType::Normal) ? y_prey_spawn_normal_(rng_) : y_dist_uniform_(rng_);
+        vel.x = v_dist_uniform_(rng_);
+        vel.y = v_dist_uniform_(rng_);
         std::bernoulli_distribution is_female(prey_female_dist_);
         Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
         creatures_.emplace_back(settings_, SpeciesRole::Prey, sex, pos, vel);
@@ -77,8 +89,10 @@ void Field::initializeCreatures()
     // Spawn predators.
     for (std::size_t i = 0; i < settings_.numpred; ++i)
     {
-        Vec2 pos{x_dist_(rng_), y_dist_(rng_)};
-        Vec2 vel{v_dist_(rng_), v_dist_(rng_)};
+        pos.x = (spawnDistType == DistType::Normal) ? x_predator_spawn_normal_(rng_) : x_dist_uniform_(rng_);
+        pos.y = (spawnDistType == DistType::Normal) ? y_predator_spawn_normal_(rng_) : y_dist_uniform_(rng_);
+        vel.x = v_dist_uniform_(rng_);
+        vel.y = v_dist_uniform_(rng_);
         std::bernoulli_distribution is_female(pred_female_dist_);
         Sex sex = is_female(rng_) == 1 ? Sex::Female : Sex::Male;
         creatures_.emplace_back(settings_, SpeciesRole::Predator, sex, pos, vel);
@@ -89,6 +103,11 @@ void Field::initializeCreatures()
 void Field::step(float dt)
 {
     // Update all existing creatures.
+    auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time_);
+    start_time_ = std::chrono::steady_clock::now(); // reassign start_time_
+    std::chrono::duration<float> sec = elapsed;
+    elapsed_sec_ = elapsed.count();
+
     for (Creature& c : creatures_)
     {
         if(c.isAlive())
@@ -133,15 +152,11 @@ void Field::step(float dt)
         std::remove_if(creatures_.begin(), creatures_.end(),
                        [](const Creature& c) { return !c.isAlive(); }),
         creatures_.end());
-    
 }
-
-static int pairChecks = 0;
-static int pairChecks_previous = 0;
-static int ticks = 0;
 
 void Field::handleInteractions()
 {
+    int pairChecks = 0;
     const float interaction_radius2 = settings_.interaction_radius * settings_.interaction_radius;
     std::vector<Creature> newborns;
     newborns.reserve(creatures_.size() / 4); // approximation
@@ -259,8 +274,8 @@ void Field::handleInteractions()
                                     0.5f * (A.position().y + B.position().y)
                                 };
                                 Vec2 child_vel{
-                                    v_dist_(rng_),
-                                    v_dist_(rng_)
+                                    v_dist_uniform_(rng_),
+                                    v_dist_uniform_(rng_)
                                 };
                                 
                                 std::bernoulli_distribution is_female(prey_female_dist_);
@@ -283,15 +298,9 @@ void Field::handleInteractions()
         }
     }
     
+    pair_checks_per_frame_ = pairChecks;
     for (Creature& c : newborns)
         creatures_.push_back(std::move(c));
-    if (ticks > 60) {
-        ticks = 0;
-        size_t delta = pairChecks - pairChecks_previous;
-        std::cerr << "creatures=" << creatures_.size() << " pairchecks=" << pairChecks << " delta=" << delta << std::endl;
-        pairChecks_previous = pairChecks;
-    }
-    ticks++;
 }
 
 std::vector<CreatureState> Field::snapshot() const

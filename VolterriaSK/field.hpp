@@ -35,6 +35,11 @@ struct GrassPatch
     int cx() const noexcept { return cell_x_; } // may not use
     int cy() const noexcept { return cell_y_; } // may not use
     
+    Vec2 position() const
+    {
+        return center;
+    }
+    
     void update(float dt, float regrow_rate)
     {
         health += regrow_rate * dt;
@@ -71,6 +76,8 @@ struct CreatureState
     bool         alive;
 };
 
+
+enum class IntentType { None, Hunt, SeekMate, SeekFood };
 enum class DistType { Uniform, Normal };
 
 struct Perception
@@ -113,9 +120,12 @@ public:
     
 private:
     Settings settings_;
+    uint32_t next_creature_id = 1; // monotonic counter to prevent indexing sync issues
+    
     std::vector<Creature> creatures_;
     std::vector<GrassPatch> grassPatches_;
     std::vector<std::vector<FieldCell>> field_cells_;
+    std::vector<SteeringIntent> intents_;
     std::mt19937 rng_;
     
     std::uniform_real_distribution<float> x_dist_uniform_;
@@ -134,6 +144,7 @@ private:
     void handleInteractions();
     void initializeGrass();
     void pairCheck();
+    void computeIntents();
     template <typename T> void ComputeCellLocation(const T&, int*, int*);
     
     // recalculated after determining # of cells

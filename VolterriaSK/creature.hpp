@@ -75,19 +75,40 @@ inline Vec2 operator*(float s, const Vec2& v)
 }
 
 // Squared length helper used for distance checks.
-float lengthSquared(const Vec2& v);
+static inline float lengthSquared(const Vec2& v) { return v.x * v.x + v.y * v.y; }
+static inline float length(const Vec2& v) { return std::sqrt(lengthSquared(v)); }
+static inline Vec2 normalize(const Vec2& v)
+{
+    float m = length(v);
+    if (m <= 1e-6f) return {0.f, 0.f}; // don't normalize very small magnitude
+    return { v.x/m, v.y/m };
+}
+
+static inline Vec2 clampMagnitude(const Vec2& v, float maxMag)
+{
+    float m2 = lengthSquared(v);
+    if (m2 <= maxMag*maxMag) return v;
+    float m = std::sqrt(m2);
+    return { v.x * (maxMag/m), v.y * (maxMag/m) };
+}
+
+struct SteeringIntent {
+    Vec2 desired_dir{0.f, 0.f};
+    bool has_target = false;
+};
 
 class Creature
 {
 public:
-    Creature(const Settings& settings,
+    Creature(const uint32_t id,
+             const Settings& settings,
              SpeciesRole       role,
              Sex               sex,
              const Vec2&       initial_position,
              const Vec2&       initial_velocity);
 
     // Per-frame update entry point used by Field.
-    void update(float dt, const Settings& settings);
+    void update(float dt, const Settings& settings, const SteeringIntent& intent);
     void setHunger(float);
     void setCellLocation(float, float);
 
@@ -97,9 +118,12 @@ public:
     const Vec2& position()    const noexcept { return position_; }
     const Vec2& velocity()    const noexcept { return velocity_; }
     bool        isAlive()     const noexcept { return alive_;   }
+    bool        shouldHunt(const Settings&);
+    bool        shouldSeekMate(const Settings&);
     float       hunger()      const noexcept { return hunger_;  }
     float       libido()      const noexcept { return libido_;  }
     float       libidoThreshold() const noexcept { return libido_threshold_; }
+    uint32_t id() const noexcept { return id_; }
 //    int cx() const noexcept { return cell_x_; }
 //    int cy() const noexcept { return cell_y_; }
 
@@ -109,12 +133,18 @@ public:
     void onEat(const Settings& settings);
     void onMate(const Settings& settings);
     void add_hunger(float amount, float max_hunger);
+    void hunt(float, const Settings&, const SteeringIntent&);
+    void forage(float,const Settings&, const SteeringIntent&);
+    void seekMate(float, const Settings&, const SteeringIntent&);
 
 private:
     void integrate(float dt);
     void wander(float dt, const Settings& settings);
     void applyWorldBounds(const Settings& settings);
-
+    void applySeekSteering(const Vec2&, float, float);
+    
+    uint32_t id_;
+    
     SpeciesRole species_;
     Sex sex_;
 
@@ -139,6 +169,9 @@ private:
     // Aging state
     float age_ = 0.0f; // current age in simulation seconds
     float max_age_ = 60.f; // assigned in constructorfrom Settings
+    
+//    bool should_hunt_ = false;
+//    bool should_seek_mate_ = false;
 
     std::mt19937 rng_;
 };

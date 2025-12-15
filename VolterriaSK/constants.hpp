@@ -22,18 +22,18 @@ enum class SpeciesRole : int { Prey = 0, Predator = 1 };
 enum class Sex : int { Male = 0, Female = 1 };
 
 // Default creature counts for a fresh field.
-constexpr int numprey_default  = 100;
-constexpr int numpred_default  = 10;
+constexpr int numprey_default  = 40;
+constexpr int numpred_default  = 12;
 
 // Maximum recommended speed (units / second). This is used by the
 // acceleration logic to keep velocities from exploding.
-constexpr float vmax_default = 250.0f; // default 100.0
+constexpr float vmax_default = 100.0f; // default 100.0
 
 // Default period between hunger ticks (seconds).
-constexpr float hunger_tick_seconds_default = 0.5f;
+constexpr float hunger_tick_seconds_default = 0.2f;
 
-constexpr float default_length = 1000.f;
-constexpr float golden_ratio = 1.f; // approx 1.162 ~= 1.1618033
+constexpr float default_length = 500.f;
+constexpr float golden_ratio = 1.682f; // approx 1.162 ~= 1.1618033
 
 
 

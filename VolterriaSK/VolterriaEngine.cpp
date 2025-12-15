@@ -35,7 +35,8 @@ std::vector<VCreatureSnapshot> VolterriaEngine::creatureSnapshot() const {
         if(!c.isAlive())
             continue;
         VCreatureSnapshot s;
-        s.id = static_cast<int32_t>(i);
+        //s.id = static_cast<int32_t>(i);
+        s.id = c.id(); // get unique, monotonically increasing id to prevent sync issues with SpriteKit
         s.x = c.position().x;
         s.y = c.position().y;
         s.role = (c.species() == SpeciesRole::Prey)

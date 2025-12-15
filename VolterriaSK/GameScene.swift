@@ -175,34 +175,48 @@ final class GameScene: SKScene {
     }
     
     private func makePreyNode(id: Int32, sex: VSex) -> SKShapeNode {
-        let radius: CGFloat = 4
-        let node = SKShapeNode(circleOfRadius: radius)
-        node.fillColor = .green
+        let female_radius: CGFloat = 4
+        let male_side: CGFloat = 8
+        var node: SKShapeNode
+        //let node = SKShapeNode(circleOfRadius: radius)
+        //let node = SKShapeNode(rectOf: CGSize(width: 4, height: 4))
+        //node.fillColor = .green
         switch sex {
         case .Male:
-            node.strokeColor = .blue
+            node = SKShapeNode(rectOf: CGSize(width: male_side, height: male_side))
+            //node.strokeColor = .blue
         case .Female:
-            node.strokeColor = .magenta
+            node = SKShapeNode(circleOfRadius: female_radius)
         @unknown default:
+            node = SKShapeNode()
             node.strokeColor = .clear
         }
+        node.fillColor = .green
+        node.strokeColor = .white
         addChild(node)
         preyNodes[id] = node
         return node
     }
     
     private func makePredatorNode(id: Int32, sex: VSex) -> SKShapeNode {
-        let radius: CGFloat = 4
-        let node = SKShapeNode(circleOfRadius: radius)
-        node.fillColor = .red
+        let female_radius: CGFloat = 4
+        let male_side: CGFloat = 8
+        var node: SKShapeNode
+        //let node = SKShapeNode(circleOfRadius: radius)
+        //let node = SKShapeNode(rectOf: CGSize(width: 4, height: 4))
+        //node.fillColor = .green
         switch sex {
         case .Male:
-            node.strokeColor = .blue
+            node = SKShapeNode(rectOf: CGSize(width: male_side, height: male_side))
+            //node.strokeColor = .blue
         case .Female:
-            node.strokeColor = .magenta
+            node = SKShapeNode(circleOfRadius: female_radius)
         @unknown default:
-            node.strokeColor = .white
+            node = SKShapeNode()
+            node.strokeColor = .clear
         }
+        node.fillColor = .red
+        node.strokeColor = .white
         addChild(node)
         predatorNodes[id] = node
         return node

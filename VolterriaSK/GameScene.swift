@@ -153,10 +153,14 @@ final class GameScene: SKScene {
             case .Prey:
                 seenPrey.insert(c.id)
                 let node = preyNodes[c.id] ?? makePreyNode(id: c.id, sex: c.sex)
+                node.fillColor = .green.withAlphaComponent(CGFloat(c.normalizedHunger))
+                node.setScale(1.0 - 0.9 * CGFloat(c.normalizedAge))
                 node.position = pos
             case .Predator:
                 seenPredators.insert(c.id)
                 let node = predatorNodes[c.id] ?? makePredatorNode(id: c.id, sex: c.sex)
+                node.fillColor = .red.withAlphaComponent(CGFloat(c.normalizedHunger))
+                node.setScale(1.0 - 0.9 * CGFloat(c.normalizedAge))
                 node.position = pos
             @unknown default:
                 break
@@ -175,16 +179,12 @@ final class GameScene: SKScene {
     }
     
     private func makePreyNode(id: Int32, sex: VSex) -> SKShapeNode {
-        let female_radius: CGFloat = 4
-        let male_side: CGFloat = 8
+        let female_radius: CGFloat = 6
+        let male_side: CGFloat = 12
         var node: SKShapeNode
-        //let node = SKShapeNode(circleOfRadius: radius)
-        //let node = SKShapeNode(rectOf: CGSize(width: 4, height: 4))
-        //node.fillColor = .green
         switch sex {
         case .Male:
             node = SKShapeNode(rectOf: CGSize(width: male_side, height: male_side))
-            //node.strokeColor = .blue
         case .Female:
             node = SKShapeNode(circleOfRadius: female_radius)
         @unknown default:
@@ -199,12 +199,10 @@ final class GameScene: SKScene {
     }
     
     private func makePredatorNode(id: Int32, sex: VSex) -> SKShapeNode {
-        let female_radius: CGFloat = 4
-        let male_side: CGFloat = 8
+        let female_radius: CGFloat = 6
+        //print (CGFloat(normalizedAge))
+        let male_side: CGFloat = 12
         var node: SKShapeNode
-        //let node = SKShapeNode(circleOfRadius: radius)
-        //let node = SKShapeNode(rectOf: CGSize(width: 4, height: 4))
-        //node.fillColor = .green
         switch sex {
         case .Male:
             node = SKShapeNode(rectOf: CGSize(width: male_side, height: male_side))
@@ -291,6 +289,25 @@ final class GameScene: SKScene {
             blue: 0.7,
             alpha: 0.2 + 0.6 * h
         )
+    }
+    
+    private func creatureColor(for normalizedHunger: Float, species: VSpeciesRole) -> SKColor {
+        let h = max(0.0, min(1.0, CGFloat(normalizedHunger)))
+        if (species == .Predator) {
+            return SKColor(
+                red: 1.0,
+                green: 0.0,
+                blue: 0.0,
+                alpha: 0.1 + 0.9 * h
+            )
+        } else {
+            return SKColor(
+                red: 0.0,
+                green: 1.0,
+                blue: 0.0,
+                alpha: 0.1 + 0.9 * h
+            )
+        }
     }
 }
 

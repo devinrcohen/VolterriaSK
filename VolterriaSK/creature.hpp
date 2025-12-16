@@ -12,10 +12,13 @@
 // The only responsibility here is updating position / velocity / acceleration
 // and internal state like hunger and libido.
 
+#include <iostream>
 #include <random>
 #include "constants.hpp"
 #include "settings.hpp"
 
+enum class SpeciesRole : int { Prey = 0, Predator = 1 };
+enum class Sex : int { Male = 0, Female = 1 };
 // declaring as a struct instead of class makes all members public by default
 // equivalent to class Vec2{ public: ... };
 struct Vec2
@@ -120,7 +123,10 @@ public:
     bool        isAlive()     const noexcept { return alive_;   }
     bool        shouldHunt(const Settings&);
     bool        shouldSeekMate(const Settings&);
-    float       hunger()      const noexcept { return hunger_;  }
+    float       hunger() const noexcept { return hunger_; }
+    float       normalizedHunger()      const noexcept { return hunger_/max_hunger_;  }
+    float       age() const noexcept { return age_; }
+    float       normalizedAge() const noexcept { return age_/max_age_; }
     float       libido()      const noexcept { return libido_;  }
     float       libidoThreshold() const noexcept { return libido_threshold_; }
     uint32_t id() const noexcept { return id_; }
@@ -154,6 +160,7 @@ private:
 
     bool  alive_            = true;
     float hunger_           = 0.0f;  // "fullness" style hunger: 0 = starving
+    float max_hunger_       = 0.0f;
     float libido_           = 0.0f;
     float starve_rate_      = 1.0f;  // units of fullness lost per second
     float libido_rate_      = 1.0f;  // units of libido gained per second

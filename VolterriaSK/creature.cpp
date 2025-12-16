@@ -36,6 +36,7 @@ Creature::Creature(const uint32_t id,
         max_libido_       = settings.prey_libido_max;
         libido_threshold_ = settings.prey_libido_threshold;
         hunger_           = settings.prey_hunger_max;
+        max_hunger_       = settings.prey_hunger_max;
     }
     else // Predator
     {
@@ -44,6 +45,7 @@ Creature::Creature(const uint32_t id,
         max_libido_       = settings.predator_libido_max;
         libido_threshold_ = settings.pred_libido_threshold;
         hunger_           = settings.predator_hunger_max; // start reasonably full
+        max_hunger_       = settings.predator_hunger_max;
     }
     
     std::uniform_real_distribution<float> libido_dist(0.0f, libido_threshold_);
@@ -64,6 +66,7 @@ Creature::Creature(const uint32_t id,
     }
     
     age_ = 0.0; // life begins
+    //std::cerr << (species_==SpeciesRole::Predator ? "Predator" : "Prey ") << "with mag age: " << max_age_ << std::endl;
 }
 
 void Creature::update(float dt, const Settings& settings, const SteeringIntent& intent)

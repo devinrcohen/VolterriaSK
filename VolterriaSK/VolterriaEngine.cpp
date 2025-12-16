@@ -44,6 +44,9 @@ std::vector<VCreatureSnapshot> VolterriaEngine::creatureSnapshot() const {
                : VSpeciesRole::Predator;
         s.sex = (c.sex() == Sex::Female ? VSex::Female : VSex::Male);
         s.alive = c.isAlive();
+        s.normalizedHunger = c.normalizedHunger();
+        s.age = c.age();
+        s.normalizedAge = c.normalizedAge();
         out.push_back(s);
     }
     return out;

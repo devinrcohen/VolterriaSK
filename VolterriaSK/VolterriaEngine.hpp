@@ -40,6 +40,9 @@ struct VCreatureSnapshot {
     VSpeciesRole role;
     VSex sex;
     bool alive;
+    float normalizedHunger;
+    float age;
+    float normalizedAge;
 };
 
 // High-level C++ engine wrapper around Field

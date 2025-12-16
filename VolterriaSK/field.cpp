@@ -539,7 +539,7 @@ void Field::computeIntents()
 //                        }
                     } else if (A.shouldSeekMate(settings_))
                     {
-                        if (A.sex() != Sex::Male) continue; // only males pursue; removes spiral chases
+                        if (settings_.prevent_spirals && A.sex() != Sex::Male) continue; // only males pursue; removes spiral chases
                         if (!B.shouldSeekMate(settings_)) continue; // only pursue females who are ready to go
 //                        if (A.species() == B.species())
 //                        {
@@ -551,8 +551,9 @@ void Field::computeIntents()
 //                                bestD2 = d2;
 //                            }
 //                        }
-                        // effectively, male A's only chase female B's for mating
-                        if (A.species() == B.species() && B.sex() == Sex::Female)
+                        // effectively, male A's only chase female B's for mating, both must be "full enough"
+                        if (A.species() == B.species() && B.sex() == Sex::Female
+                            && 0.5*(A.normalizedHunger()+B.normalizedHunger()) >= settings_.min_normalized_hunger_to_mate)
                         {
                             bestIdx = idx;
                             bestD2 = d2;

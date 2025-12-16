@@ -15,17 +15,19 @@
 
 struct Settings
 {
+    float default_length = 500.f;
+    float height_ratio = 1.682f; // approx 1.162 ~= 1.1618033
     // World bounds in "field" coordinates.
     // Swift / SFML can map these to pixels however they like.
     float x_min = 0.0f;
-    float x_max = x_min + default_length/golden_ratio;
+    float x_max = x_min + default_length/height_ratio;
     float y_min = 0.0f;
     float y_max = y_min + default_length;
-    float x_center = (x_min + x_max)/2.0;
-    float y_center = (y_min + y_max)/2.0;
+    const float x_center = (x_min + x_max)/2.0;
+    const float y_center = (y_min + y_max)/2.0;
     
-    float field_width = x_max - x_min;
-    float field_height = y_max - y_min;
+    const float field_width = x_max - x_min;
+    const float field_height = y_max - y_min;
     
     // spawn locations
     float prey_spawn_mean_x = x_center;
@@ -39,12 +41,12 @@ struct Settings
     float predator_spawn_stdev = std::min(field_height/2.0, field_height/2.0) / (2 * predator_spawn_stdev_n);
     
     // Initial population sizes.
-    int numprey = numprey_default;
-    int numpred = numpred_default;
+    int numprey = 80;
+    int numpred = 16;
     
     // Velocity / acceleration tuning.
     // vmax is the soft cap for creature speed (units / second).
-    float vmax = vmax_default;
+    float vmax_default = 100.f;
     
     // How often (seconds) each creature is allowed to "re-roll" its
     // acceleration vector. This keeps motion from changing direction
@@ -54,28 +56,28 @@ struct Settings
     // Predator / prey hunger and libido tuning.
     // These are intentionally fairly high-level so you can experiment
     // from Swift without touching the C++.
-    float pred_hunger_threshold = 5.0f;  // below this, predator will eat on contact
+    float pred_hunger_threshold = 3.0f;  // below this, predator will eat on contact
     float prey_hunger_threshold = 5.0f;  // below this, prey will eat grass on contact
-    float prey_hunger_restore_rate = 2.f; // how much health to add when eating
-    float pred_libido_threshold = 3.0f;  // must be above this to reproduce
+    float prey_hunger_restore_rate = 8.f; // how much health to add when eating per second
+    float pred_libido_threshold = 4.0f;  // must be above this to reproduce
     float prey_libido_threshold = 3.0f;
     
     // Intent-based motion tuning
-    const float predator_hunt_speed_min = 100.f;
-    const float predator_hunt_speed_max = 250.f;
-    const float predator_hunt_max_accel = 100.f;
+    float predator_hunt_speed_min = 100.f;
+    float predator_hunt_speed_max = 250.f;
+    float predator_hunt_max_accel = 200.f;
     
-    const float prey_forage_speed_min = 50.f;
-    const float prey_forage_speed_max = 100.f;
-    const float prey_forage_max_accel = 100.f;
+    float prey_forage_speed_min = 100.f;
+    float prey_forage_speed_max = 250.f;
+    float prey_forage_max_accel = 200.f;
     
     float prey_mate_speed_min = 120.0f; // 120
     float prey_mate_speed_max = 320.0f; // 320
     float prey_mate_max_accel = 200.f; // 300
 
-    float predator_mate_speed_min = 50.0f; // 160
-    float predator_mate_speed_max = 200.0f; // 420
-    float predator_mate_max_accel = 100.0f; // 350
+    float predator_mate_speed_min = 100.0f; // 160
+    float predator_mate_speed_max = 300.0f; // 420
+    float predator_mate_max_accel = 200.0f; // 350
     
     float predator_hunger_max   = 10.0f;
     float prey_hunger_max   = 10.0f;
@@ -83,33 +85,34 @@ struct Settings
     float prey_libido_max   = 10.0f;
     
     // How often hunger is updated (seconds).
-    float hunger_tick_seconds = hunger_tick_seconds_default;
+    float hunger_tick_seconds = 0.2f;
     
     // Per-second libido growth rates (per second).
-    float prey_libido_rate = 1.0f; // 0.3f
+    float prey_libido_rate = 0.25f; // 0.3f
     float pred_libido_rate = 1.0f; // 1.f
     
     // Per-second starvation rates.
-    float prey_starve_rate = 0.5f;  // one "fullness" unit per second
+    float prey_starve_rate = 0.5f;  // 0.5 "fullness" unit per second
     
     float pred_starve_rate = 1.0f;
     
     // Distance within which creatures can interact (eat / mate), in
     // field units. Rendering code can pick whatever scale makes sense.
-    float interaction_radius = 20.0f;
-    float prey_vision_radius = 200.0f;
+    float interaction_radius = 30.0f;
+    float prey_vision_radius = 300.0f;
     float predator_vision_radius = 400.0f; // 300
-    const float interaction_multiplier = 2.f;
+    float interaction_multiplier = 2.f;
+    float min_normalized_hunger_to_mate = 0.3f;
     //float cell_size = interaction_multiplier * interaction_radius;
-    float cell_size = interaction_radius * interaction_multiplier;
+    const float cell_size = interaction_radius * interaction_multiplier;
     
-    float prey_max_speed = vmax_default / 1.0f; // 20% the speed of a predator so predator always wins, tune the denominator.
-    float predator_max_speed = vmax_default;
-    
+    const float prey_max_speed = vmax_default / 1.0f; // 20% the speed of a predator so predator always wins, tune the denominator.
+    const float predator_max_speed = vmax_default;
+    bool prevent_spirals = false; // causes females not to chase a mate if set true
     // Aging parameters
-    float prey_max_age = 60.f; // seconds in-game time: 15f latest default
+    float prey_max_age = 30.f; // seconds in-game time: 60f latest default
     //float prey_age_tolerance = 2.f; // +/- seconds
-    float pred_max_age = 45.f; // seconds in-game time: 11f latest default
+    float pred_max_age = 20.f; // seconds in-game time: 45f latest default
     //float predator_age_tolerance = 2.f; // +/- seconds
     
     // max age randomness, +/-25% by default
@@ -129,8 +132,8 @@ struct Settings
     float probability_female_prey = 0.5f;
     float probability_female_pred = 0.5f;
     
-    int num_cells_x = std::ceil((x_max - x_min) / cell_size);
-    int num_cells_y = std::ceil((y_max - y_min) / cell_size);
+    const int num_cells_x = std::ceil((x_max - x_min) / cell_size);
+    const int num_cells_y = std::ceil((y_max - y_min) / cell_size);
     
     
 };

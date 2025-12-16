@@ -27,7 +27,7 @@ Field::Field(const Settings& settings)
       rng_(std::random_device{}()),
       x_dist_uniform_(settings_.x_min, settings_.x_max),
       y_dist_uniform_(settings_.y_min, settings_.y_max),
-      v_dist_uniform_(-settings_.vmax, settings_.vmax),
+      v_dist_uniform_(-settings_.vmax_default, settings_.vmax_default),
       x_prey_spawn_normal_(settings_.prey_spawn_mean_x, settings_.prey_spawn_stdev),
       y_prey_spawn_normal_(settings_.prey_spawn_mean_y, settings_.prey_spawn_stdev),
       x_predator_spawn_normal_(settings_.predator_spawn_mean_x, settings_.predator_spawn_stdev),
@@ -48,7 +48,7 @@ void Field::ResetFromSettings()
     grassPatches_.clear();
     x_dist_uniform_ = std::uniform_real_distribution<float>(settings_.x_min, settings_.x_max);
     y_dist_uniform_ = std::uniform_real_distribution<float>(settings_.y_min, settings_.y_max);
-    v_dist_uniform_ = std::uniform_real_distribution<float>(-settings_.vmax, settings_.vmax);
+    v_dist_uniform_ = std::uniform_real_distribution<float>(-settings_.vmax_default, settings_.vmax_default);
     x_prey_spawn_normal_ = std::normal_distribution<float>(settings_.prey_spawn_mean_x, settings_.prey_spawn_stdev);
     y_prey_spawn_normal_ = std::normal_distribution<float>(settings_.prey_spawn_mean_y, settings_.prey_spawn_stdev);
     x_predator_spawn_normal_ = std::normal_distribution<float>(settings_.predator_spawn_mean_x, settings_.predator_spawn_stdev);

@@ -151,16 +151,16 @@ void Creature::wander(float dt, const Settings& settings)
 
     // Simple random walk: pick a new acceleration vector with components
     // in the range [-vmax, vmax].
-    std::uniform_real_distribution<float> accel_dist(-settings.vmax, settings.vmax);
+    std::uniform_real_distribution<float> accel_dist(-settings.vmax_default, settings.vmax_default);
     acceleration_.x = accel_dist(rng_);
     acceleration_.y = accel_dist(rng_);
 
     // Clamp velocity to avoid spiraling out of control.
     const float vlen2 = lengthSquared(velocity_);
-    const float vmax2 = settings.vmax * settings.vmax;
+    const float vmax2 = settings.vmax_default * settings.vmax_default;
     if (vlen2 > vmax2 && vlen2 > 0.0f)
     {
-        const float scale = settings.vmax / std::sqrt(vlen2);
+        const float scale = settings.vmax_default / std::sqrt(vlen2);
         velocity_.x *= scale;
         velocity_.y *= scale;
     }
